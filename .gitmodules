@@ -1,0 +1,3 @@
+[submodule "gradido_protocol"]
+	path = gradido_protocol
+	url = https://github.com/gradido/gradido_protocol.git
