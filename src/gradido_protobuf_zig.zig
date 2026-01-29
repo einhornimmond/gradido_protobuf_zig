@@ -2,9 +2,10 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const Profiler = @import("profiler.zig").Profiler;
 
-threadlocal var allocator = std.heap.page_allocator;
+threadlocal var allocator = std.heap.c_allocator;
 
 const grdw = @cImport({
+    @cInclude("gradido_protobuf_zig.c");
     @cInclude("gradido_protobuf_zig.h");
 });
 
@@ -93,8 +94,8 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
         grdw.grdw_gradido_transaction_set_body_bytes(&tx.transaction, @ptrCast(transaction.body_Bytes), @intCast(transaction.body_Bytes.len));
     }
 
-    const version: [:0]const u8 = @ptrCast(decoded_tx.version_number);
-    grdw.grdw_confirmed_transaction_set_version_number(tx, @ptrCast(version));
+    const version_z = arena.allocator().dupeZ(u8, decoded_tx.version_number) catch return -1;
+    grdw.grdw_confirmed_transaction_set_version_number(tx, @ptrCast(version_z));
     grdw.grdw_confirmed_transaction_set_running_hash(tx, @ptrCast(decoded_tx.running_hash));
     // ledger anchor
     if (decoded_tx.ledger_anchor) |ledger_anchor| {
@@ -107,7 +108,10 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
     for (decoded_tx.account_balances.items) |account_balance| {
         @memcpy(&tx.*.account_balances[index].pubkey, account_balance.pubkey);
         tx.*.account_balances[index].balance = account_balance.balance;
-        grdw.grdw_account_balance_set_community_id(&tx.*.account_balances[index], @ptrCast(account_balance.community_id));
+        if (account_balance.community_id.len > 0) {
+            const community_id_str = arena.allocator().dupeZ(u8, account_balance.community_id) catch return -1;
+            grdw.grdw_account_balance_set_community_id(&tx.*.account_balances[index], @ptrCast(community_id_str));
+        }
         index += 1;
     }
     return 0;

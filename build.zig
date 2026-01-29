@@ -119,6 +119,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     serializationC.addIncludePath(b.path("include"));
+    serializationC.addIncludePath(b.path("src"));
     serializationC.root_module.addImport("protobuf", protobuf_dep.module("protobuf"));
     b.installArtifact(serializationC);
     //const emittedH = serializationC.getEmittedH();
