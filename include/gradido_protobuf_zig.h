@@ -85,14 +85,15 @@ typedef struct grdw_gradido_transaction {
   uint8_t body_bytes_size;
 } grdw_gradido_transaction;
 
+void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_size) {
+  tx->sig_map = (grdw_signature_pair*)malloc(sizeof(grdw_signature_pair) * sig_map_size);
+  tx->sig_map_size = sig_map_size;
+}
+
 void grdw_gradido_transaction_set_body_bytes(grdw_gradido_transaction* tx, const uint8_t* body_bytes, size_t body_bytes_size) {
   tx->body_bytes = (uint8_t*)malloc(sizeof(uint8_t) * body_bytes_size);
   tx->body_bytes_size = body_bytes_size;
   memcpy(tx->body_bytes, body_bytes, body_bytes_size);
-}
-void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_size) {
-  tx->sig_map = (grdw_signature_pair*)malloc(sizeof(grdw_signature_pair) * sig_map_size);
-  tx->sig_map_size = sig_map_size;
 }
 
 typedef struct grdw_account_balance {
@@ -129,7 +130,15 @@ void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transact
   tx->account_balances_size = account_balances_size;
 }
 
-extern int grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, uint8_t* data, size_t size);
+void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) {
+  free(tx->version_number);
+  free(tx->running_hash);
+  free(tx->account_balances);
+  free(tx->transaction.sig_map);
+  free(tx->transaction.body_bytes);
+}
+// zig will call c functions to malloc for tx pointer, but free must be called from caller
+extern int grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
 
 #ifdef __cplusplus
 }

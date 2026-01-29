@@ -2,6 +2,8 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const Profiler = @import("profiler.zig").Profiler;
 
+threadlocal var allocator = std.heap.page_allocator;
+
 const grdw = @cImport({
     @cInclude("gradido_protobuf_zig.h");
 });
@@ -46,9 +48,9 @@ fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_a
     }
 }
 
-export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: [*]u8, size: usize) c_int {
-    const tx_slice: []u8 = data[0..size];
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: [*]const u8, size: usize) c_int {
+    const tx_slice: []const u8 = data[0..size];
+    var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
     var reader: std.io.Reader = .fixed(tx_slice);
@@ -69,7 +71,30 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
         // .running_hash = decoded_tx.running_hash,
         // .version_number = decoded_tx.version_number,
     };
-    grdw.grdw_confirmed_transaction_set_version_number(tx, @ptrCast(decoded_tx.version_number));
+
+    var index: u8 = 0;
+    // GradidoTransaction
+    if (decoded_tx.transaction) |transaction| {
+        // signature map
+        index = 0;
+        if (transaction.sig_map) |sig_map| {
+            grdw.grdw_gradido_transaction_reserve_sig_map(&tx.transaction, @intCast(sig_map.sig_pair.items.len));
+            for (sig_map.sig_pair.items) |sig_pair| {
+                @memcpy(&tx.*.transaction.sig_map[index].public_key, sig_pair.pubkey);
+                @memcpy(&tx.*.transaction.sig_map[index].signature, sig_pair.signature);
+                index += 1;
+            }
+        }
+        // pairing ledger anchor
+        if (transaction.pairing_ledger_anchor) |pairing_ledger_anchor| {
+            convert_ledger_anchor(&tx.*.transaction.pairing_ledger_anchor, &pairing_ledger_anchor);
+        }
+        // body bytes
+        grdw.grdw_gradido_transaction_set_body_bytes(&tx.transaction, @ptrCast(transaction.body_Bytes), @intCast(transaction.body_Bytes.len));
+    }
+
+    const version: [:0]const u8 = @ptrCast(decoded_tx.version_number);
+    grdw.grdw_confirmed_transaction_set_version_number(tx, @ptrCast(version));
     grdw.grdw_confirmed_transaction_set_running_hash(tx, @ptrCast(decoded_tx.running_hash));
     // ledger anchor
     if (decoded_tx.ledger_anchor) |ledger_anchor| {
@@ -78,7 +103,7 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
 
     // account balances
     grdw.grdw_confirmed_transaction_reserve_account_balances(tx, @intCast(decoded_tx.account_balances.items.len));
-    var index: u8 = 0;
+    index = 0;
     for (decoded_tx.account_balances.items) |account_balance| {
         @memcpy(&tx.*.account_balances[index].pubkey, account_balance.pubkey);
         tx.*.account_balances[index].balance = account_balance.balance;
