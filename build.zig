@@ -107,6 +107,23 @@ pub fn build(b: *std.Build) void {
     // and lastly use the dependency as a module
     exe.root_module.addImport("protobuf", protobuf_dep.module("protobuf"));
 
+    // as C-Lib
+    const serializationC = b.addLibrary(.{
+        .linkage = .static,
+        .name = "gradido_serialization",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/gradido_protobuf_zig.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    serializationC.addIncludePath(b.path("include"));
+    serializationC.root_module.addImport("protobuf", protobuf_dep.module("protobuf"));
+    b.installArtifact(serializationC);
+    //const emittedH = serializationC.getEmittedH();
+    //b.installFile(emittedH.generated.sub_path, "");
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden

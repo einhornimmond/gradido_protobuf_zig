@@ -2,6 +2,10 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const Profiler = @import("profiler.zig").Profiler;
 
+const grdw = @cImport({
+    @cInclude("include/gradido_protobuf_zig.h");
+});
+
 pub fn main() !void {
     var profiler = Profiler.init();
     const allocator = std.heap.page_allocator;
