@@ -110,7 +110,7 @@ pub fn build(b: *std.Build) void {
     // as C-Lib
     const serializationC = b.addLibrary(.{
         .linkage = .static,
-        .name = "gradido_serialization",
+        .name = "gradido_protobuf_zig",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/gradido_protobuf_zig.zig"),
             .target = target,
