@@ -6,6 +6,9 @@ threadlocal var allocator = std.heap.c_allocator;
 
 const grdw = @cImport({
     @cInclude("gradido_protobuf_zig.c");
+    @cInclude("grdw_basic_types.h");
+    @cInclude("grdw_hiero.h");
+    @cInclude("grdw_ledger_anchor.h");
     @cInclude("gradido_protobuf_zig.h");
 });
 
@@ -49,7 +52,16 @@ fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_a
     }
 }
 
-export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: [*]const u8, size: usize) c_int {
+fn copy_string(alloc: std.mem.Allocator, src: []const u8) ?[*c]u8 {
+    const src_str = alloc.dupeZ(u8, src) catch return null;
+    return grdw.grdu_reserve_copy_string(@ptrCast(src_str));
+}
+
+fn copy_bytes(src: []const u8) ?[*c]u8 {
+    return grdw.grdu_reserve_copy(@ptrCast(src), src.len);
+}
+
+export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) c_int {
     const tx_slice: []const u8 = data[0..size];
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
@@ -65,12 +77,10 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
             .seconds = decoded_tx.confirmed_at.?.seconds,
             .nanos = decoded_tx.confirmed_at.?.nanos,
         },
-        // .version_number = decoded_tx.version_number,
+        .version_number = copy_string(arena.allocator(), decoded_tx.version_number) orelse return -1,
         .balance_derivation = @intCast(@intFromEnum(decoded_tx.balance_derivation)),
-        // .confirmed_at = decoded_tx.confirmed_at,
         // .ledger_anchor = decoded_tx.ledger_anchor,
-        // .running_hash = decoded_tx.running_hash,
-        // .version_number = decoded_tx.version_number,
+        .running_hash = copy_bytes(decoded_tx.running_hash) orelse return -1,
     };
 
     var index: u8 = 0;
@@ -94,9 +104,6 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
         grdw.grdw_gradido_transaction_set_body_bytes(&tx.transaction, @ptrCast(transaction.body_Bytes), @intCast(transaction.body_Bytes.len));
     }
 
-    const version_z = arena.allocator().dupeZ(u8, decoded_tx.version_number) catch return -1;
-    grdw.grdw_confirmed_transaction_set_version_number(tx, @ptrCast(version_z));
-    grdw.grdw_confirmed_transaction_set_running_hash(tx, @ptrCast(decoded_tx.running_hash));
     // ledger anchor
     if (decoded_tx.ledger_anchor) |ledger_anchor| {
         convert_ledger_anchor(&tx.ledger_anchor, &ledger_anchor);
@@ -109,10 +116,46 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
         @memcpy(&tx.*.account_balances[index].pubkey, account_balance.pubkey);
         tx.*.account_balances[index].balance = account_balance.balance;
         if (account_balance.community_id.len > 0) {
-            const community_id_str = arena.allocator().dupeZ(u8, account_balance.community_id) catch return -1;
-            grdw.grdw_account_balance_set_community_id(&tx.*.account_balances[index], @ptrCast(community_id_str));
+            tx.*.account_balances[index].community_id = copy_string(arena.allocator(), account_balance.community_id) orelse return -1;
         }
         index += 1;
     }
+    return 0;
+}
+
+export fn grdw_transaction_body_decode(body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) callconv(.c) c_int {
+    const tx_slice: []const u8 = data[0..size];
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+
+    var reader: std.io.Reader = .fixed(tx_slice);
+    const decoded_tx = gradido.TransactionBody.decode(&reader, arena.allocator()) catch |err| {
+        std.debug.print("Error decoding transaction: {}\n", .{err});
+        return -1;
+    };
+    body.* = .{
+        .memos = null,
+        .memos_count = 0,
+        .created_at = .{
+            .seconds = decoded_tx.created_at.?.seconds,
+            .nanos = decoded_tx.created_at.?.nanos,
+        },
+        .version_number = copy_string(arena.allocator(), decoded_tx.version_number) orelse return -1,
+        .type = @intCast(@intFromEnum(decoded_tx.type)),
+        .other_group = copy_string(arena.allocator(), decoded_tx.other_group) orelse null,
+        .data = undefined,
+    };
+    var index: usize = 0;
+    // memos
+    if (decoded_tx.memos.items.len > 0) {
+        grdw.grdw_transaction_body_reserve_memos(body, @intCast(decoded_tx.memos.items.len));
+        for (decoded_tx.memos.items) |memo| {
+            body.*.memos[index].type = @intCast(@intFromEnum(memo.type));
+            body.*.memos[index].memo = copy_bytes(memo.memo) orelse return -1;
+            body.*.memos[index].memo_size = @intCast(memo.memo.len);
+            index += 1;
+        }
+    }
+
     return 0;
 }

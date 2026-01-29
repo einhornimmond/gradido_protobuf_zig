@@ -14,9 +14,9 @@ void grdw_ledger_anchor_set_hiero_transaction_id(grdw_ledger_anchor* anchor, grd
 }
 
 
-void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_size) {
-  tx->sig_map = (grdw_signature_pair*)malloc(sizeof(grdw_signature_pair) * sig_map_size);
-  tx->sig_map_size = sig_map_size;
+void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_count) {
+  tx->sig_map = (grdw_signature_pair*)malloc(sizeof(grdw_signature_pair) * sig_map_count);
+  tx->sig_map_count = sig_map_count;
 }
 
 void grdw_gradido_transaction_set_body_bytes(grdw_gradido_transaction* tx, const uint8_t* body_bytes, size_t body_bytes_size) {
@@ -25,17 +25,11 @@ void grdw_gradido_transaction_set_body_bytes(grdw_gradido_transaction* tx, const
   memcpy(tx->body_bytes, body_bytes, body_bytes_size);
 }
 
-void grdw_account_balance_set_community_id(grdw_account_balance* balance, const char* community_id) {
-  balance->community_id = strdup(community_id);
+void grdw_transaction_body_reserve_memos(grdw_transaction_body* body, size_t memos_count) {
+  body->memos = (grdw_encrypted_memo*)malloc(sizeof(grdw_encrypted_memo) * memos_count);
+  body->memos_count = memos_count;
 }
 
-void grdw_confirmed_transaction_set_version_number(grdw_confirmed_transaction* tx, const char* version_number) {
-  tx->version_number = strdup(version_number);
-}
-void grdw_confirmed_transaction_set_running_hash(grdw_confirmed_transaction* tx, const uint8_t* running_hash) {
-  tx->running_hash = (uint8_t*)malloc(sizeof(uint8_t) * 32);
-  memcpy(tx->running_hash, running_hash, 32);
-}
 void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transaction* tx, uint8_t account_balances_size) {
   tx->account_balances = (grdw_account_balance*)malloc(sizeof(grdw_account_balance) * account_balances_size);
   tx->account_balances_size = account_balances_size;
@@ -47,4 +41,14 @@ void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) {
   free(tx->account_balances);
   free(tx->transaction.sig_map);
   free(tx->transaction.body_bytes);
+}
+
+char* grdu_reserve_copy_string(const char* src) {
+  return strdup(src);
+}
+
+uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size) {
+  uint8_t* dst = (uint8_t*)malloc(size);
+  memcpy(dst, src, size);
+  return dst;
 }
