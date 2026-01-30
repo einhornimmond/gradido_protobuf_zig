@@ -43,6 +43,27 @@ void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) {
   free(tx->transaction.body_bytes);
 }
 
+void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
+  free(body->version_number);
+  if(body->other_group) {
+    free(body->other_group);
+  }
+  if(body->memos) {
+    free(body->memos);
+  }
+  switch(body->transaction_type) {
+    case GRDW_TRANSACTION_TYPE_CREATION: free(body->data.creation); break;
+    case GRDW_TRANSACTION_TYPE_TRANSFER: free(body->data.transfer); break;
+    case GRDW_TRANSACTION_TYPE_COMMUNITY_FRIENDS_UPDATE: free(body->data.community_friends_update); break;
+    case GRDW_TRANSACTION_TYPE_REGISTER_ADDRESS: free(body->data.register_address); break;
+    case GRDW_TRANSACTION_TYPE_DEFERRED_TRANSFER: free(body->data.deferred_transfer); break;
+    case GRDW_TRANSACTION_TYPE_COMMUNITY_ROOT: free(body->data.community_root); break;
+    case GRDW_TRANSACTION_TYPE_REDEEM_DEFERRED_TRANSFER: free(body->data.redeem_deferred_transfer); break;
+    case GRDW_TRANSACTION_TYPE_TIMEOUT_DEFERRED_TRANSFER: free(body->data.timeout_deferred_transfer); break;
+    default: break;
+  }
+}
+
 char* grdu_reserve_copy_string(const char* src) {
   return strdup(src);
 }
