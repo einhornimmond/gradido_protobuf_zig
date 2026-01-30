@@ -79,7 +79,7 @@ typedef struct grdw_gradido_transaction {
   uint8_t *body_bytes;
   grdw_ledger_anchor pairing_ledger_anchor;
   uint8_t sig_map_count;
-  uint8_t body_bytes_size;
+  uint16_t body_bytes_size;
 } grdw_gradido_transaction;
 
 void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_count);

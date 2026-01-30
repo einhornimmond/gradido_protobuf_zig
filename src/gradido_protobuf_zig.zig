@@ -130,6 +130,10 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
         }
         // body bytes
         grdw.grdw_gradido_transaction_set_body_bytes(&tx.transaction, @ptrCast(transaction.body_Bytes), @intCast(transaction.body_Bytes.len));
+        if (@as(usize, @intCast(tx.transaction.body_bytes_size)) != transaction.body_Bytes.len) {
+            std.debug.print("Body bytes size type overflow: {} Bytes does not fit in u16\n", .{transaction.body_Bytes.len});
+            return -1;
+        }
     }
 
     // ledger anchor
