@@ -217,7 +217,7 @@ export fn grdw_transaction_body_decode(body: *grdw.grdw_transaction_body, data: 
             .deferred_transfer => |deferred_transfer| {
                 if (deferred_transfer.transfer) |transfer| {
                     body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_DEFERRED_TRANSFER;
-                    body.*.data.deferred_transfer = grdw.grdw_gradido_deferred_transfer_new(convertGradidoTransfer(arena.allocator(), transfer), @intCast(deferred_transfer.timeout_duration));
+                    body.*.data.deferred_transfer = grdw.grdw_gradido_deferred_transfer_new(convertGradidoTransfer(arena.allocator(), transfer), @intCast(deferred_transfer.timeout_duration.?.seconds));
                 } else {
                     std.debug.print("Error decoding transaction: {s}\n", .{"deferred_transfer.transfer is null"});
                     return -3;
