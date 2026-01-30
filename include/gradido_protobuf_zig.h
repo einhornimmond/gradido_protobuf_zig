@@ -102,6 +102,7 @@ typedef struct grdw_confirmed_transaction {
 void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transaction* tx, uint8_t account_balances_size);
 
 void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx);
+void grdw_transaction_body_free_deep(grdw_transaction_body* body);
 // utils
 char* grdu_reserve_copy_string(const char* src);
 uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size);
