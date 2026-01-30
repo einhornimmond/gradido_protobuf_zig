@@ -64,12 +64,18 @@ void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
   }
 }
 
-char* grdu_reserve_copy_string(const char* src) {
-  return strdup(src);
+char* grdu_reserve_copy_string(const char* src, size_t size) {
+  char* dst = (char*)malloc(size);
+  memcpy(dst, src, size);
+  return dst;
 }
 
 uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size) {
   uint8_t* dst = (uint8_t*)malloc(size);
   memcpy(dst, src, size);
   return dst;
+}
+
+size_t grdu_strlen(const char* src) {
+  return strlen(src);
 }

@@ -104,12 +104,15 @@ void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transact
 void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx);
 void grdw_transaction_body_free_deep(grdw_transaction_body* body);
 // utils
-char* grdu_reserve_copy_string(const char* src);
+char* grdu_reserve_copy_string(const char* src, size_t size);
 uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size);
+size_t grdu_strlen(const char* src);
 
 // zig will call c functions to malloc for tx pointer, but free must be called from caller
 extern int grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
 extern int grdw_transaction_body_decode(grdw_transaction_body* body, const uint8_t* data, size_t size);
+extern int grdw_transaction_body_encode(const grdw_transaction_body* body, uint8_t* data, size_t size);
+extern void grdw_zig_deinit_fixed_allocator();
 
 #ifdef __cplusplus
 }
