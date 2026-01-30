@@ -10,7 +10,8 @@ fn init_fixed_allocator() std.heap.FixedBufferAllocator {
     if (fixed_allocator) |allocator| {
         return allocator;
     }
-    main_buffer = main_allocator.alloc(u8, 512) catch unreachable;
+    // TODO: make buffer size dynamic/configurable from c caller
+    main_buffer = main_allocator.alloc(u8, 2048) catch unreachable;
     if (main_buffer) |buf| {
         const alloc = std.heap.FixedBufferAllocator.init(buf);
         fixed_allocator = alloc;

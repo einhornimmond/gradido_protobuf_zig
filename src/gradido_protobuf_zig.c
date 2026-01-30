@@ -65,8 +65,9 @@ void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
 }
 
 char* grdu_reserve_copy_string(const char* src, size_t size) {
-  char* dst = (char*)malloc(size);
+  char* dst = (char*)malloc(size+1);
   memcpy(dst, src, size);
+  dst[size] = '\0';
   return dst;
 }
 
