@@ -16,26 +16,26 @@ extern "C" {
 
 typedef enum {
 		//! Invalid or Empty Transaction
-		NONE = 0,
+		GRDW_TRANSACTION_TYPE_NONE = 0,
 		//! Creation Transaction, creates new Gradidos
-		CREATION = 1,
+		GRDW_TRANSACTION_TYPE_CREATION = 1,
 		//! Transfer Transaction, move Gradidos from one account to another
-		TRANSFER = 2,
+		GRDW_TRANSACTION_TYPE_TRANSFER = 2,
 		//! Group Friends Update Transaction, update relationship between groups
-		COMMUNITY_FRIENDS_UPDATE = 3,
+		GRDW_TRANSACTION_TYPE_COMMUNITY_FRIENDS_UPDATE = 3,
 		//! Register new address or sub address to group or move addres to another group
-		REGISTER_ADDRESS = 4,
+		GRDW_TRANSACTION_TYPE_REGISTER_ADDRESS = 4,
 		//! Special Transfer Transaction with timeout used for Gradido Link
-		DEFERRED_TRANSFER = 5,
+		GRDW_TRANSACTION_TYPE_DEFERRED_TRANSFER = 5,
 		//! First Transaction in Blockchain
-		COMMUNITY_ROOT = 6,
+		GRDW_TRANSACTION_TYPE_COMMUNITY_ROOT = 6,
 		//! redeeming deferred transfer
-		REDEEM_DEFERRED_TRANSFER = 7,
+		GRDW_TRANSACTION_TYPE_REDEEM_DEFERRED_TRANSFER = 7,
 		//! timeout deferred transfer, send back locked gdds
-		TIMEOUT_DEFERRED_TRANSFER = 8,
+		GRDW_TRANSACTION_TYPE_TIMEOUT_DEFERRED_TRANSFER = 8,
 
 		//! technial type for using it in for loops, as max index
-		MAX_VALUE = 9
+		GRDW_TRANSACTION_TYPE_MAX_VALUE = 9
 } grdw_transaction_type;
 
 typedef enum {
@@ -47,12 +47,9 @@ typedef enum {
 
 typedef struct grdw_transaction_body {
   grdw_encrypted_memo *memos;
-  grdw_timestamp created_at;
-  char *version_number;
-  grdw_transaction_body_cross_group_type type;
-  uint8_t memos_count;
-  grdw_transaction_type transaction_type;
   char *other_group;
+  char *version_number;
+  grdw_timestamp created_at; 
   union {
     grdw_gradido_transfer *transfer;
     grdw_gradido_creation *creation;
@@ -63,6 +60,9 @@ typedef struct grdw_transaction_body {
     grdw_gradido_redeem_deferred_transfer *redeem_deferred_transfer;
     grdw_gradido_timeout_deferred_transfer *timeout_deferred_transfer;
   } data;
+  uint8_t memos_count;  
+  grdw_transaction_body_cross_group_type type;
+  grdw_transaction_type transaction_type;     
 } grdw_transaction_body;
 
 void grdw_transaction_body_reserve_memos(grdw_transaction_body* body, size_t memos_count);
