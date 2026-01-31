@@ -76,7 +76,7 @@ fn convertGradidoTransfer(src: gradido.GradidoTransfer) !grdw.grdw_gradido_trans
     return result;
 }
 
-pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) !usize {
+pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) error{ OutOfMemory, WriteFailed, ReadFailed, EndOfStream, NotEnoughData, InvalidInput, BodyBytesSizeTypeOverflow, TransferAmountIsNull }!usize {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -135,7 +135,7 @@ pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw
     return arena.queryCapacity();
 }
 
-pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) !usize {
+pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) error{ OutOfMemory, WriteFailed, ReadFailed, EndOfStream, NotEnoughData, InvalidInput, TransferAmountIsNull, CreationTargetDateIsNull, DeferredTransferTransferIsNull, RedeemDeferredTransferTransferIsNull }!usize {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 

@@ -26,7 +26,7 @@ fn fromCGradidoTransfer(src: *grdw.grdw_gradido_transfer) gradido.GradidoTransfe
     };
 }
 
-pub fn grdw_transaction_body_encode(allocator: std.mem.Allocator, c_body: *const grdw.grdw_transaction_body, data: [*c]u8, size: usize) !usize {
+pub fn grdw_transaction_body_encode(allocator: std.mem.Allocator, c_body: *const grdw.grdw_transaction_body, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType }!usize {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
