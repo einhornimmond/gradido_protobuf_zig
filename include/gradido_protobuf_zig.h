@@ -112,7 +112,6 @@ size_t grdu_strlen(const char* src);
 extern int grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
 extern int grdw_transaction_body_decode(grdw_transaction_body* body, const uint8_t* data, size_t size);
 extern int grdw_transaction_body_encode(const grdw_transaction_body* body, uint8_t* data, size_t size);
-extern void grdw_zig_deinit_fixed_allocator();
 
 #ifdef __cplusplus
 }

@@ -2,35 +2,6 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const Profiler = @import("profiler.zig").Profiler;
 
-threadlocal var main_allocator = std.heap.c_allocator;
-threadlocal var main_buffer: ?[]u8 = null;
-threadlocal var fixed_allocator: ?std.heap.FixedBufferAllocator = null;
-
-fn init_fixed_allocator() std.heap.FixedBufferAllocator {
-    if (fixed_allocator) |allocator| {
-        return allocator;
-    }
-    // TODO: make buffer size dynamic/configurable from c caller
-    main_buffer = main_allocator.alloc(u8, 2048) catch unreachable;
-    if (main_buffer) |buf| {
-        const alloc = std.heap.FixedBufferAllocator.init(buf);
-        fixed_allocator = alloc;
-        return alloc;
-    } else {
-        std.debug.print("Failed to allocate buffer for fixed allocator\n", .{});
-        unreachable;
-    }
-    unreachable;
-}
-// can be called from c for optimization
-export fn grdw_zig_deinit_fixed_allocator() void {
-    fixed_allocator = null;
-    if (main_buffer) |buffer| {
-        main_allocator.free(buffer);
-    }
-    main_buffer = null;
-}
-
 const grdw = @cImport({
     @cInclude("gradido_protobuf_zig.h");
     @cInclude("gradido_protobuf_zig.c");
@@ -97,11 +68,7 @@ fn reference_c_string(src: [*c]const u8) []const u8 {
     if (src_size == 0) {
         return "";
     }
-    return @as([*]const u8, @ptrCast(src))[0..src_size];
-}
-
-fn reference_c_bytes(src: [*c]const u8, len: usize) []const u8 {
-    return @as([*]const u8, @ptrCast(src))[0..len];
+    return src[0..src_size];
 }
 
 fn copy_bytes(src: []const u8) ?[*c]u8 {
@@ -144,9 +111,9 @@ fn convertGradidoTransfer(src: gradido.GradidoTransfer) grdw.grdw_gradido_transf
 }
 
 export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) c_int {
-    var alloc = init_fixed_allocator();
+    var stackBuffer: [1024]u8 = undefined;
+    var alloc = std.heap.FixedBufferAllocator.init(stackBuffer[0..]);
     var arena = std.heap.ArenaAllocator.init(alloc.allocator());
-    defer arena.deinit();
 
     var reader: std.io.Reader = .fixed(data[0..size]);
     const decoded_tx = gradido.ConfirmedTransaction.decode(&reader, arena.allocator()) catch |err| {
@@ -208,9 +175,9 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
 }
 
 export fn grdw_transaction_body_decode(body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) c_int {
-    var alloc = init_fixed_allocator();
+    var stackBuffer: [1024]u8 = undefined;
+    var alloc = std.heap.FixedBufferAllocator.init(stackBuffer[0..]);
     var arena = std.heap.ArenaAllocator.init(alloc.allocator());
-    defer arena.deinit();
 
     var reader: std.io.Reader = .fixed(data[0..size]);
     const decoded_tx = gradido.TransactionBody.decode(&reader, arena.allocator()) catch |err| {
@@ -301,9 +268,9 @@ export fn grdw_transaction_body_decode(body: *grdw.grdw_transaction_body, data: 
 }
 
 export fn grdw_transaction_body_encode(c_body: *const grdw.grdw_transaction_body, data: [*c]u8, size: usize) c_int {
-    var alloc = init_fixed_allocator();
+    var stackBuffer: [2048]u8 = undefined;
+    var alloc = std.heap.FixedBufferAllocator.init(stackBuffer[0..]);
     var arena = std.heap.ArenaAllocator.init(alloc.allocator());
-    defer arena.deinit();
 
     var body: gradido.TransactionBody = .{
         .created_at = .{
@@ -323,7 +290,7 @@ export fn grdw_transaction_body_encode(c_body: *const grdw.grdw_transaction_body
         for (c_body.memos[0..c_body.memos_count]) |memo| {
             body.memos.append(arena.allocator(), .{
                 .type = @enumFromInt(memo.type),
-                .memo = reference_c_string(memo.memo),
+                .memo = memo.memo[0..memo.memo_size],
             }) catch |err| {
                 std.debug.print("Error appending memo: {}\n", .{err});
                 return -2;
@@ -357,6 +324,7 @@ export fn grdw_transaction_body_encode(c_body: *const grdw.grdw_transaction_body
         grdw.GRDW_TRANSACTION_TYPE_REGISTER_ADDRESS => {
             body.data = gradido.TransactionBody.data_union{
                 .register_address = .{
+                    .user_pubkey = &c_body.data.register_address.*.user_pubkey,
                     .address_type = @enumFromInt(c_body.data.register_address.*.address_type),
                     .derivation_index = c_body.data.register_address.*.derivation_index,
                     .name_hash = &c_body.data.register_address.*.name_hash,
@@ -402,6 +370,10 @@ export fn grdw_transaction_body_encode(c_body: *const grdw.grdw_transaction_body
 
     var c_caller_buffer_alloc = std.heap.FixedBufferAllocator.init(data[0..size]);
     var writer = std.io.Writer.Allocating.init(c_caller_buffer_alloc.allocator());
+    writer.ensureUnusedCapacity(512) catch |err| {
+        std.debug.print("Error ensuring unused capacity: {}\n", .{err});
+        return -6;
+    };
     body.encode(&writer.writer, arena.allocator()) catch |err| {
         return switch (err) {
             error.OutOfMemory => -4,
