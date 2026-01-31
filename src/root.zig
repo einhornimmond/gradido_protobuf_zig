@@ -1,23 +1,45 @@
-//! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
+const encode = @import("encode.zig");
+const decode = @import("decode.zig");
+const grdw = @import("c.zig").grdw;
 
-pub fn bufferedPrint() !void {
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
+fn withDualAllocator(
+    comptime Func: anytype,
+    args: anytype,
+) !usize {
+    var stack_buffer: [1024]u8 = undefined;
+    var fixed_allocator = std.heap.FixedBufferAllocator.init(stack_buffer[0..]);
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    return @call(.auto, Func, .{fixed_allocator.allocator()} ++ args) catch |err| {
+        switch (err) {
+            error.OutOfMemory => {
+                const result = try @call(.auto, Func, .{std.heap.c_allocator} ++ args);
 
-    try stdout.flush(); // Don't forget to flush!
+                std.log.warn("Function {s} needed dynamic allocator, used {d} bytes", .{ @typeName(@TypeOf(Func)), result });
+                return result;
+            },
+            else => return err,
+        }
+    };
 }
 
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
+fn wrapCodec(
+    comptime Func: anytype,
+    args: anytype,
+) c_int {
+    const result = withDualAllocator(Func, args) catch |err| {
+        std.log.err("Codec error in {s}: {}", .{ @typeName(@TypeOf(Func)), err });
+        return -1;
+    };
+    return @intCast(result);
 }
 
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+export fn grdw_confirmed_transaction_decode(grdw_confirmed_transaction: *grdw.grdw_confirmed_transaction, data: *const u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(decode.grdw_confirmed_transaction_decode, .{ grdw_confirmed_transaction, data, size });
+}
+export fn grdw_transaction_body_decode(grdw_transaction_body: *grdw.grdw_transaction_body, data: *const u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(decode.grdw_transaction_body_decode, .{ grdw_transaction_body, data, size });
+}
+export fn grdw_transaction_body_encode(grdw_transaction_body: *const grdw.grdw_transaction_body, data: *u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(encode.grdw_transaction_body_encode, .{ grdw_transaction_body, data, size });
 }
