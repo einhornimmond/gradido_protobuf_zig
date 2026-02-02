@@ -35,21 +35,44 @@ void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transact
   tx->account_balances_size = account_balances_size;
 }
 
-void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) {
-  free(tx->version_number);
-  free(tx->running_hash);
-  free(tx->account_balances);
-  free(tx->transaction.sig_map);
-  free(tx->transaction.body_bytes);
+void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) 
+{
+  if (!tx) return;
+  if (tx->version_number) {
+    free(tx->version_number);
+    tx->version_number = NULL;
+  }
+  if (tx->running_hash) {
+    free(tx->running_hash);
+    tx->running_hash = NULL;
+  }
+  if (tx->account_balances) {
+    free(tx->account_balances);
+    tx->account_balances = NULL;
+  }
+  if (tx->transaction.sig_map) {
+    free(tx->transaction.sig_map);
+    tx->transaction.sig_map = NULL;
+  }
+  if (tx->transaction.body_bytes) {
+    free(tx->transaction.body_bytes);
+    tx->transaction.body_bytes = NULL;
+  }
 }
 
 void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
-  free(body->version_number);
+  if (!body) return;
+  if (body->version_number) {
+    free(body->version_number);
+    body->version_number = NULL;
+  }
   if(body->other_group) {
     free(body->other_group);
+    body->other_group = NULL;
   }
   if(body->memos) {
     free(body->memos);
+    body->memos = NULL;
   }
   switch(body->transaction_type) {
     case GRDW_TRANSACTION_TYPE_CREATION: free(body->data.creation); break;
@@ -62,6 +85,7 @@ void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
     case GRDW_TRANSACTION_TYPE_TIMEOUT_DEFERRED_TRANSFER: free(body->data.timeout_deferred_transfer); break;
     default: break;
   }
+  body->transaction_type = GRDW_TRANSACTION_TYPE_NONE;
 }
 
 char* grdu_reserve_copy_string(const char* src, size_t size) {
