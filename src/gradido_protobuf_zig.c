@@ -73,6 +73,7 @@ void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
   if(body->memos) {
     free(body->memos);
     body->memos = NULL;
+    body->memos_count = 0;
   }
   switch(body->transaction_type) {
     case GRDW_TRANSACTION_TYPE_CREATION: free(body->data.creation); break;

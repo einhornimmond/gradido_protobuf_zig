@@ -76,7 +76,22 @@ fn convertGradidoTransfer(src: gradido.GradidoTransfer) !grdw.grdw_gradido_trans
     return result;
 }
 
-pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) error{ OutOfMemory, WriteFailed, ReadFailed, EndOfStream, NotEnoughData, InvalidInput, BodyBytesSizeTypeOverflow, TransferAmountIsNull }!usize {
+pub const DecodeError = error{
+    BodyBytesSizeTypeOverflow,
+    CreationTargetDateIsNull,
+    DeferredTransferTransferIsNull,
+    EndOfStream,
+    InvalidBytesLength,
+    InvalidInput,
+    NotEnoughData,
+    OutOfMemory,
+    ReadFailed,
+    RedeemDeferredTransferTransferIsNull,
+    TransferAmountIsNull,
+    WriteFailed,
+};
+
+pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) DecodeError!usize {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -135,7 +150,7 @@ pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw
     return arena.queryCapacity();
 }
 
-pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) error{ OutOfMemory, WriteFailed, ReadFailed, EndOfStream, NotEnoughData, InvalidInput, TransferAmountIsNull, CreationTargetDateIsNull, DeferredTransferTransferIsNull, RedeemDeferredTransferTransferIsNull }!usize {
+pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) DecodeError!usize {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -189,6 +204,18 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
             },
             .register_address => |register_address| {
                 body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_REGISTER_ADDRESS;
+                if (register_address.user_pubkey.len != 32) {
+                    std.log.err("register_address.user_pubkey.len invalid: {d}, 32 expected\n", .{register_address.user_pubkey.len});
+                    return error.InvalidBytesLength;
+                }
+                if (register_address.name_hash.len != 32) {
+                    std.log.err("register_address.name_hash.len invalid: {d}, 32 expected\n", .{register_address.name_hash.len});
+                    return error.InvalidBytesLength;
+                }
+                if (register_address.account_pubkey.len != 32) {
+                    std.log.err("register_address.account_pubkey.len invalid: {d}, 32 expected\n", .{register_address.account_pubkey.len});
+                    return error.InvalidBytesLength;
+                }
                 body.*.data.register_address = grdw.grdw_register_address_new(@ptrCast(register_address.user_pubkey), @intCast(@intFromEnum(register_address.address_type)), @ptrCast(register_address.name_hash), @ptrCast(register_address.account_pubkey), @intCast(register_address.derivation_index));
             },
             .deferred_transfer => |deferred_transfer| {

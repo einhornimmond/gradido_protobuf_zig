@@ -30,8 +30,15 @@ fn wrapCodec(
     args: anytype,
 ) c_int {
     const result = withDualAllocator(Func, bufferSize, args) catch |err| {
-        std.log.err("Codec error in {s}: {}", .{ @typeName(@TypeOf(Func)), err });
-        return -1;
+        switch (err) {
+            error.EndOfStream => {
+                return -2;
+            },
+            else => {
+                std.log.err("Codec error in {s}: {}", .{ @typeName(@TypeOf(Func)), err });
+                return -1;
+            },
+        }
     };
     return @intCast(result);
 }
