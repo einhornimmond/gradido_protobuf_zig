@@ -30,9 +30,9 @@ void grdw_transaction_body_reserve_memos(grdw_transaction_body* body, size_t mem
   body->memos_count = memos_count;
 }
 
-void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transaction* tx, uint8_t account_balances_size) {
-  tx->account_balances = (grdw_account_balance*)malloc(sizeof(grdw_account_balance) * account_balances_size);
-  tx->account_balances_size = account_balances_size;
+void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transaction* tx, uint8_t account_balances_count) {
+  tx->account_balances = (grdw_account_balance*)malloc(sizeof(grdw_account_balance) * account_balances_count);
+  tx->account_balances_count = account_balances_count;
 }
 
 void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx) 

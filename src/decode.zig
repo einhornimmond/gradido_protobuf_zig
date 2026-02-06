@@ -2,7 +2,7 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const grdw = @import("c.zig").grdw;
 
-fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_anchor: *const gradido.LedgerAnchor) void {
+fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_anchor: *const gradido.LedgerAnchor) error{UnknownAnchorIdCase}!void {
     if (src_ledger_anchor.anchor_id) |anchor_id| {
         switch (anchor_id) {
             .hiero_transaction_id => |hiero_transaction_id| {
@@ -36,7 +36,8 @@ fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_a
                 c_ledger_anchor.anchor_id.legacy_transaction_link_id = legacy_transaction_link_id;
             },
             else => {
-                std.debug.print("Unknown anchor id case: {}\n", .{src_ledger_anchor.type});
+                std.log.err("Unknown anchor id case: {}\n", .{src_ledger_anchor.type});
+                return error.UnknownAnchorIdCase;
             },
         }
     }
@@ -76,6 +77,27 @@ fn convertGradidoTransfer(src: gradido.GradidoTransfer) !grdw.grdw_gradido_trans
     return result;
 }
 
+fn convert_gradido_transaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw.grdw_gradido_transaction) DecodeError!void {
+    // signature map
+    if (gradido_tx.sig_map) |sig_map| {
+        grdw.grdw_gradido_transaction_reserve_sig_map(tx, @intCast(sig_map.sig_pair.items.len));
+        for (0..sig_map.sig_pair.items.len) |i| {
+            const sig_pair = sig_map.sig_pair.items[i];
+            @memcpy(&tx.*.sig_map[i].public_key, sig_pair.pubkey);
+            @memcpy(&tx.*.sig_map[i].signature, sig_pair.signature);
+        }
+    }
+    // pairing ledger anchor
+    if (gradido_tx.pairing_ledger_anchor) |pairing_ledger_anchor| {
+        try convert_ledger_anchor(&tx.*.pairing_ledger_anchor, &pairing_ledger_anchor);
+    }
+    // body bytes
+    grdw.grdw_gradido_transaction_set_body_bytes(tx, @ptrCast(gradido_tx.body_Bytes), @intCast(gradido_tx.body_Bytes.len));
+    if (@as(usize, @intCast(tx.body_bytes_size)) != gradido_tx.body_Bytes.len) {
+        return error.BodyBytesSizeTypeOverflow;
+    }
+}
+
 pub const DecodeError = error{
     BodyBytesSizeTypeOverflow,
     CreationTargetDateIsNull,
@@ -88,6 +110,7 @@ pub const DecodeError = error{
     ReadFailed,
     RedeemDeferredTransferTransferIsNull,
     TransferAmountIsNull,
+    UnknownAnchorIdCase,
     WriteFailed,
 };
 
@@ -109,44 +132,35 @@ pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw
         .running_hash = copy_bytes(decoded_tx.running_hash),
     };
 
-    var index: u8 = 0;
     // GradidoTransaction
     if (decoded_tx.transaction) |transaction| {
-        // signature map
-        index = 0;
-        if (transaction.sig_map) |sig_map| {
-            grdw.grdw_gradido_transaction_reserve_sig_map(&tx.transaction, @intCast(sig_map.sig_pair.items.len));
-            for (sig_map.sig_pair.items) |sig_pair| {
-                @memcpy(&tx.*.transaction.sig_map[index].public_key, sig_pair.pubkey);
-                @memcpy(&tx.*.transaction.sig_map[index].signature, sig_pair.signature);
-                index += 1;
-            }
-        }
-        // pairing ledger anchor
-        if (transaction.pairing_ledger_anchor) |pairing_ledger_anchor| {
-            convert_ledger_anchor(&tx.*.transaction.pairing_ledger_anchor, &pairing_ledger_anchor);
-        }
-        // body bytes
-        grdw.grdw_gradido_transaction_set_body_bytes(&tx.transaction, @ptrCast(transaction.body_Bytes), @intCast(transaction.body_Bytes.len));
-        if (@as(usize, @intCast(tx.transaction.body_bytes_size)) != transaction.body_Bytes.len) {
-            return error.BodyBytesSizeTypeOverflow;
-        }
+        try convert_gradido_transaction(transaction, &tx.transaction);
     }
 
     // ledger anchor
     if (decoded_tx.ledger_anchor) |ledger_anchor| {
-        convert_ledger_anchor(&tx.ledger_anchor, &ledger_anchor);
+        try convert_ledger_anchor(&tx.ledger_anchor, &ledger_anchor);
     }
 
     // account balances
     grdw.grdw_confirmed_transaction_reserve_account_balances(tx, @intCast(decoded_tx.account_balances.items.len));
-    index = 0;
-    for (decoded_tx.account_balances.items) |account_balance| {
-        @memcpy(&tx.*.account_balances[index].pubkey, account_balance.pubkey);
-        tx.*.account_balances[index].balance = account_balance.balance;
-        tx.*.account_balances[index].community_id = copy_string(account_balance.community_id);
-        index += 1;
+    for (0..tx.*.account_balances_count) |i| {
+        // for (decoded_tx.account_balances.items) |account_balance| {
+        const account_balance = decoded_tx.account_balances.items[i];
+        @memcpy(&tx.*.account_balances[i].pubkey, account_balance.pubkey);
+        tx.*.account_balances[i].balance = account_balance.balance;
+        tx.*.account_balances[i].community_id = copy_string(account_balance.community_id);
     }
+    return arena.queryCapacity();
+}
+
+pub fn grdw_gradido_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_gradido_transaction, data: [*c]const u8, size: usize) DecodeError!usize {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+
+    var reader: std.io.Reader = .fixed(data[0..size]);
+    const decoded_tx = try gradido.GradidoTransaction.decode(&reader, arena.allocator());
+    try convert_gradido_transaction(decoded_tx, tx);
     return arena.queryCapacity();
 }
 
@@ -169,15 +183,14 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
         .other_group = copy_string(decoded_tx.other_group),
         .data = undefined,
     };
-    var index: usize = 0;
     // memos
     if (decoded_tx.memos.items.len > 0) {
         grdw.grdw_transaction_body_reserve_memos(body, @intCast(decoded_tx.memos.items.len));
-        for (decoded_tx.memos.items) |memo| {
-            body.*.memos[index].type = @intCast(@intFromEnum(memo.type));
-            body.*.memos[index].memo = copy_bytes(memo.memo);
-            body.*.memos[index].memo_size = @intCast(memo.memo.len);
-            index += 1;
+        for (0..decoded_tx.memos.items.len) |i| {
+            const memo = decoded_tx.memos.items[i];
+            body.*.memos[i].type = @intCast(@intFromEnum(memo.type));
+            body.*.memos[i].memo = copy_bytes(memo.memo);
+            body.*.memos[i].memo_size = @intCast(memo.memo.len);
         }
     }
     // specific transaction

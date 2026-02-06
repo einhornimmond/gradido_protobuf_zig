@@ -43,12 +43,22 @@ fn wrapCodec(
     return @intCast(result);
 }
 
-export fn grdw_confirmed_transaction_decode(grdw_confirmed_transaction: *grdw.grdw_confirmed_transaction, data: *const u8, size: usize) callconv(.c) c_int {
-    return wrapCodec(decode.grdw_confirmed_transaction_decode, 1024, .{ grdw_confirmed_transaction, data, size });
+export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: *const u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(decode.grdw_confirmed_transaction_decode, 1024, .{ tx, data, size });
 }
-export fn grdw_transaction_body_decode(grdw_transaction_body: *grdw.grdw_transaction_body, data: *const u8, size: usize) callconv(.c) c_int {
-    return wrapCodec(decode.grdw_transaction_body_decode, 1024, .{ grdw_transaction_body, data, size });
+export fn grdw_gradido_transaction_decode(tx: *grdw.grdw_gradido_transaction, data: *const u8, size: usize) c_int {
+    return wrapCodec(decode.grdw_gradido_transaction_decode, 1024, .{ tx, data, size });
 }
-export fn grdw_transaction_body_encode(grdw_transaction_body: *const grdw.grdw_transaction_body, data: *u8, size: usize) callconv(.c) c_int {
-    return wrapCodec(encode.grdw_transaction_body_encode, 1152, .{ grdw_transaction_body, data, size });
+export fn grdw_transaction_body_decode(txBody: *grdw.grdw_transaction_body, data: *const u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(decode.grdw_transaction_body_decode, 1024, .{ txBody, data, size });
+}
+
+export fn grdw_confirmed_transaction_encode(tx: *const grdw.grdw_confirmed_transaction, data: *u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(encode.grdw_confirmed_transaction_encode, 1024, .{ tx, data, size });
+}
+export fn grdw_gradido_transaction_encode(tx: *const grdw.grdw_gradido_transaction, data: *u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(encode.grdw_gradido_transaction_encode, 1024, .{ tx, data, size });
+}
+export fn grdw_transaction_body_encode(txBody: *const grdw.grdw_transaction_body, data: *u8, size: usize) callconv(.c) c_int {
+    return wrapCodec(encode.grdw_transaction_body_encode, 1280, .{ txBody, data, size });
 }
