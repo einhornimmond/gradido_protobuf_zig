@@ -105,7 +105,7 @@ fn fromCGradidoTransaction(allocator: std.mem.Allocator, tx: *const grdw.grdw_gr
     return gradido_tx;
 }
 
-pub fn grdw_confirmed_transaction_encode(allocator: std.mem.Allocator, tx: *const grdw.grdw_confirmed_transaction, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, UnknownAnchorIdCase, EndOfStream }!usize {
+pub fn grdw_confirmed_transaction_encode(allocator: std.mem.Allocator, tx: *const grdw.grdw_confirmed_transaction, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, UnknownAnchorIdCase, EndOfStream }!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -132,10 +132,14 @@ pub fn grdw_confirmed_transaction_encode(allocator: std.mem.Allocator, tx: *cons
     var writer = std.io.Writer.Allocating.init(c_caller_buffer_alloc.allocator());
     try writer.ensureUnusedCapacity(512);
     try confirmedTx.encode(&writer.writer, arena.allocator());
-    return @intCast(writer.writer.buffer.len);
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = @intCast(writer.writer.end),
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }
 
-pub fn grdw_gradido_transaction_encode(allocator: std.mem.Allocator, tx: *const grdw.grdw_gradido_transaction, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, UnknownAnchorIdCase, EndOfStream }!usize {
+pub fn grdw_gradido_transaction_encode(allocator: std.mem.Allocator, tx: *const grdw.grdw_gradido_transaction, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, UnknownAnchorIdCase, EndOfStream }!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -145,10 +149,14 @@ pub fn grdw_gradido_transaction_encode(allocator: std.mem.Allocator, tx: *const 
     var writer = std.io.Writer.Allocating.init(c_caller_buffer_alloc.allocator());
     try writer.ensureUnusedCapacity(512);
     try gradido_tx.encode(&writer.writer, arena.allocator());
-    return @intCast(writer.writer.buffer.len);
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = @intCast(writer.writer.end),
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }
 
-pub fn grdw_transaction_body_encode(allocator: std.mem.Allocator, c_body: *const grdw.grdw_transaction_body, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, EndOfStream }!usize {
+pub fn grdw_transaction_body_encode(allocator: std.mem.Allocator, c_body: *const grdw.grdw_transaction_body, data: [*c]u8, size: usize) error{ OutOfMemory, WriteFailed, UnknownTransactionType, EndOfStream }!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -243,5 +251,9 @@ pub fn grdw_transaction_body_encode(allocator: std.mem.Allocator, c_body: *const
     var writer = std.io.Writer.Allocating.init(c_caller_buffer_alloc.allocator());
     try writer.ensureUnusedCapacity(512);
     try body.encode(&writer.writer, arena.allocator());
-    return @intCast(writer.writer.buffer.len);
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = @intCast(writer.writer.end),
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }

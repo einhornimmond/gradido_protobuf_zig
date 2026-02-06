@@ -108,16 +108,41 @@ char* grdu_reserve_copy_string(const char* src, size_t size);
 uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size);
 size_t grdu_strlen(const char* src);
 
+// helper for performance optimization and error reporting
+typedef enum {
+  GRDW_ENCODING_ERROR_SUCCESS = 0,
+  GRDW_ENCODING_ERROR_END_OF_STREAM = -1,
+  GRDW_ENCODING_ERROR_UNKNOWN_TRANSACTION_TYPE = -2,
+  GRDW_ENCODING_ERROR_BODY_BYTES_SIZE_TYPE_OVERFLOW = -3,
+  GRDW_ENCODING_ERROR_CREATION_TARGET_DATE_IS_NULL = -4,
+  GRDW_ENCODING_ERROR_DEFERRED_TRANSFER_TRANSFER_IS_NULL = -5,
+  GRDW_ENCODING_ERROR_INVALID_BYTES_LENGTH = -6,
+  GRDW_ENCODING_ERROR_INVALID_INPUT = -7,
+  GRDW_ENCODING_ERROR_NOT_ENOUGH_DATA = -8,
+  GRDW_ENCODING_ERROR_OUT_OF_MEMORY = -9,
+  GRDW_ENCODING_ERROR_READ_FAILED = -10,
+  GRDW_ENCODING_ERROR_REDEEM_DEFERRED_TRANSFER_TRANSFER_IS_NULL = -11,
+  GRDW_ENCODING_ERROR_TRANSFER_AMOUNT_IS_NULL = -12,
+  GRDW_ENCODING_ERROR_UNKNOWN_ANCHOR_ID_CASE = -13,
+  GRDW_ENCODING_ERROR_WRITE_FAILED = -14,
+  GRDW_ENCODING_ERROR_UNKNOWN = -15
+} grdw_encoding_error;
+
+typedef struct grdw_encode_result {
+  int32_t allocator_used; // used bytes in encoding process, needed size for static buffer
+  int32_t written; // written bytes in encoding process, needed size for result buffer
+  grdw_encoding_error state;
+} grdw_encode_result;
+
 // zig will call c functions to malloc for tx pointer, but free must be called from caller
 // decode
-extern int grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
-extern int grdw_gradido_transaction_decode(grdw_gradido_transaction* tx, const uint8_t* data, size_t size);
-extern int grdw_transaction_body_decode(grdw_transaction_body* body, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_gradido_transaction_decode(grdw_gradido_transaction* tx, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_transaction_body_decode(grdw_transaction_body* body, const uint8_t* data, size_t size);
 // encode
-extern int grdw_confirmed_transaction_encode(const grdw_confirmed_transaction* tx, uint8_t* data, size_t size);
-extern int grdw_transaction_body_encode(const grdw_transaction_body* body, uint8_t* data, size_t size);
-extern int grdw_gradido_transaction_encode(const grdw_gradido_transaction* tx, uint8_t* data, size_t size);
-
+extern grdw_encode_result grdw_confirmed_transaction_encode(const grdw_confirmed_transaction* tx, uint8_t* data, size_t size);
+extern grdw_encode_result grdw_transaction_body_encode(const grdw_transaction_body* body, uint8_t* data, size_t size);
+extern grdw_encode_result grdw_gradido_transaction_encode(const grdw_gradido_transaction* tx, uint8_t* data, size_t size);
 
 #ifdef __cplusplus
 }

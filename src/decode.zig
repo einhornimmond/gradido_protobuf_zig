@@ -2,6 +2,22 @@ const std = @import("std");
 const gradido = @import("proto/gradido.pb.zig");
 const grdw = @import("c.zig").grdw;
 
+pub const DecodeError = error{
+    BodyBytesSizeTypeOverflow,
+    CreationTargetDateIsNull,
+    DeferredTransferTransferIsNull,
+    EndOfStream,
+    InvalidBytesLength,
+    InvalidInput,
+    NotEnoughData,
+    OutOfMemory,
+    ReadFailed,
+    RedeemDeferredTransferTransferIsNull,
+    TransferAmountIsNull,
+    UnknownAnchorIdCase,
+    WriteFailed,
+};
+
 fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_anchor: *const gradido.LedgerAnchor) error{UnknownAnchorIdCase}!void {
     if (src_ledger_anchor.anchor_id) |anchor_id| {
         switch (anchor_id) {
@@ -98,23 +114,7 @@ fn convert_gradido_transaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw
     }
 }
 
-pub const DecodeError = error{
-    BodyBytesSizeTypeOverflow,
-    CreationTargetDateIsNull,
-    DeferredTransferTransferIsNull,
-    EndOfStream,
-    InvalidBytesLength,
-    InvalidInput,
-    NotEnoughData,
-    OutOfMemory,
-    ReadFailed,
-    RedeemDeferredTransferTransferIsNull,
-    TransferAmountIsNull,
-    UnknownAnchorIdCase,
-    WriteFailed,
-};
-
-pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) DecodeError!usize {
+pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -151,20 +151,28 @@ pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw
         tx.*.account_balances[i].balance = account_balance.balance;
         tx.*.account_balances[i].community_id = copy_string(account_balance.community_id);
     }
-    return arena.queryCapacity();
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = 0,
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }
 
-pub fn grdw_gradido_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_gradido_transaction, data: [*c]const u8, size: usize) DecodeError!usize {
+pub fn grdw_gradido_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_gradido_transaction, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
     var reader: std.io.Reader = .fixed(data[0..size]);
     const decoded_tx = try gradido.GradidoTransaction.decode(&reader, arena.allocator());
     try convert_gradido_transaction(decoded_tx, tx);
-    return arena.queryCapacity();
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = 0,
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }
 
-pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) DecodeError!usize {
+pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
@@ -258,5 +266,9 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
         }
     }
 
-    return @intCast(arena.queryCapacity());
+    return .{
+        .allocator_used = @intCast(arena.state.end_index),
+        .written = 0,
+        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
+    };
 }
