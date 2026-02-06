@@ -60,5 +60,5 @@ export fn grdw_gradido_transaction_encode(tx: *const grdw.grdw_gradido_transacti
     return wrapCodec(encode.grdw_gradido_transaction_encode, 1024, .{ tx, data, size });
 }
 export fn grdw_transaction_body_encode(txBody: *const grdw.grdw_transaction_body, data: *u8, size: usize) callconv(.c) c_int {
-    return wrapCodec(encode.grdw_transaction_body_encode, 1280, .{ txBody, data, size });
+    return wrapCodec(encode.grdw_transaction_body_encode, 2048, .{ txBody, data, size });
 }
