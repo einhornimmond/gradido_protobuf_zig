@@ -59,20 +59,20 @@ fn wrapCodec(
 }
 
 export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction, data: *const u8, size: usize) callconv(.c) grdw.grdw_encode_result {
-    return wrapCodec(decode.grdw_confirmed_transaction_decode, 1024, .{ tx, data, size });
+    return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_confirmed_transaction, tx, data, size });
 }
 export fn grdw_gradido_transaction_decode(tx: *grdw.grdw_gradido_transaction, data: *const u8, size: usize) grdw.grdw_encode_result {
-    return wrapCodec(decode.grdw_gradido_transaction_decode, 1024, .{ tx, data, size });
+    return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_gradido_transaction, tx, data, size });
 }
 export fn grdw_transaction_body_decode(txBody: *grdw.grdw_transaction_body, data: *const u8, size: usize) callconv(.c) grdw.grdw_encode_result {
-    return wrapCodec(decode.grdw_transaction_body_decode, 1024, .{ txBody, data, size });
+    return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_transaction_body, txBody, data, size });
 }
 
 export fn grdw_confirmed_transaction_encode(tx: *const grdw.grdw_confirmed_transaction, data: *u8, size: usize) callconv(.c) grdw.grdw_encode_result {
-    return wrapCodec(encode.grdw_confirmed_transaction_encode, 1024, .{ tx, data, size });
+    return wrapCodec(encode.grdw_confirmed_transaction_encode, 2048, .{ tx, data, size });
 }
 export fn grdw_gradido_transaction_encode(tx: *const grdw.grdw_gradido_transaction, data: *u8, size: usize) callconv(.c) grdw.grdw_encode_result {
-    return wrapCodec(encode.grdw_gradido_transaction_encode, 1024, .{ tx, data, size });
+    return wrapCodec(encode.grdw_gradido_transaction_encode, 2048, .{ tx, data, size });
 }
 export fn grdw_transaction_body_encode(txBody: *const grdw.grdw_transaction_body, data: *u8, size: usize) callconv(.c) grdw.grdw_encode_result {
     return wrapCodec(encode.grdw_transaction_body_encode, 2048, .{ txBody, data, size });

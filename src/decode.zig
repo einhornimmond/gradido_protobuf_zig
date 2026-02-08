@@ -18,7 +18,7 @@ pub const DecodeError = error{
     WriteFailed,
 };
 
-fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_anchor: *const gradido.LedgerAnchor) error{UnknownAnchorIdCase}!void {
+fn convertLedgerAnchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_anchor: *const gradido.LedgerAnchor) error{UnknownAnchorIdCase}!void {
     if (src_ledger_anchor.anchor_id) |anchor_id| {
         switch (anchor_id) {
             .hiero_transaction_id => |hiero_transaction_id| {
@@ -59,7 +59,7 @@ fn convert_ledger_anchor(c_ledger_anchor: *grdw.grdw_ledger_anchor, src_ledger_a
     }
 }
 
-fn copy_string(src: ?[]const u8) [*c]u8 {
+fn copyString(src: ?[]const u8) [*c]u8 {
     if (src) |s| {
         if (s.len == 0) {
             return null;
@@ -69,15 +69,15 @@ fn copy_string(src: ?[]const u8) [*c]u8 {
     return null;
 }
 
-fn copy_bytes(src: []const u8) [*c]u8 {
+fn copyBytes(src: []const u8) [*c]u8 {
     return grdw.grdu_reserve_copy(@ptrCast(src), src.len);
 }
 
-fn convertTransferAmount(src: ?gradido.TransferAmount) !grdw.grdw_transfer_amount {
+fn ConvertTransferAmount(src: ?gradido.TransferAmount) !grdw.grdw_transfer_amount {
     if (src) |s| {
         var result = grdw.grdw_transfer_amount{
             .amount = @intCast(s.amount),
-            .community_id = copy_string(s.community_id),
+            .community_id = copyString(s.community_id),
         };
         @memcpy(result.pubkey[0..32], s.pubkey);
         return result;
@@ -85,15 +85,15 @@ fn convertTransferAmount(src: ?gradido.TransferAmount) !grdw.grdw_transfer_amoun
     return error.TransferAmountIsNull;
 }
 
-fn convertGradidoTransfer(src: gradido.GradidoTransfer) !grdw.grdw_gradido_transfer {
+fn ConvertGradidoTransfer(src: gradido.GradidoTransfer) !grdw.grdw_gradido_transfer {
     var result = grdw.grdw_gradido_transfer{
-        .sender = try convertTransferAmount(src.sender),
+        .sender = try ConvertTransferAmount(src.sender),
     };
     @memcpy(result.recipient[0..32], src.recipient);
     return result;
 }
 
-fn convert_gradido_transaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw.grdw_gradido_transaction) DecodeError!void {
+fn convertGradidoTransaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw.grdw_gradido_transaction) DecodeError!void {
     // signature map
     if (gradido_tx.sig_map) |sig_map| {
         grdw.grdw_gradido_transaction_reserve_sig_map(tx, @intCast(sig_map.sig_pair.items.len));
@@ -105,7 +105,7 @@ fn convert_gradido_transaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw
     }
     // pairing ledger anchor
     if (gradido_tx.pairing_ledger_anchor) |pairing_ledger_anchor| {
-        try convert_ledger_anchor(&tx.*.pairing_ledger_anchor, &pairing_ledger_anchor);
+        try convertLedgerAnchor(&tx.*.pairing_ledger_anchor, &pairing_ledger_anchor);
     }
     // body bytes
     grdw.grdw_gradido_transaction_set_body_bytes(tx, @ptrCast(gradido_tx.body_Bytes), @intCast(gradido_tx.body_Bytes.len));
@@ -114,70 +114,7 @@ fn convert_gradido_transaction(gradido_tx: gradido.GradidoTransaction, tx: *grdw
     }
 }
 
-pub fn grdw_confirmed_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_confirmed_transaction, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-
-    var reader: std.io.Reader = .fixed(data[0..size]);
-    const decoded_tx = try gradido.ConfirmedTransaction.decode(&reader, arena.allocator());
-    tx.* = .{
-        .id = decoded_tx.id,
-        .confirmed_at = .{
-            .seconds = decoded_tx.confirmed_at.?.seconds,
-            .nanos = decoded_tx.confirmed_at.?.nanos,
-        },
-        .version_number = copy_string(decoded_tx.version_number),
-        .balance_derivation = @intCast(@intFromEnum(decoded_tx.balance_derivation)),
-        // .ledger_anchor = decoded_tx.ledger_anchor,
-        .running_hash = copy_bytes(decoded_tx.running_hash),
-    };
-
-    // GradidoTransaction
-    if (decoded_tx.transaction) |transaction| {
-        try convert_gradido_transaction(transaction, &tx.transaction);
-    }
-
-    // ledger anchor
-    if (decoded_tx.ledger_anchor) |ledger_anchor| {
-        try convert_ledger_anchor(&tx.ledger_anchor, &ledger_anchor);
-    }
-
-    // account balances
-    grdw.grdw_confirmed_transaction_reserve_account_balances(tx, @intCast(decoded_tx.account_balances.items.len));
-    for (0..tx.*.account_balances_count) |i| {
-        // for (decoded_tx.account_balances.items) |account_balance| {
-        const account_balance = decoded_tx.account_balances.items[i];
-        @memcpy(&tx.*.account_balances[i].pubkey, account_balance.pubkey);
-        tx.*.account_balances[i].balance = account_balance.balance;
-        tx.*.account_balances[i].community_id = copy_string(account_balance.community_id);
-    }
-    return .{
-        .allocator_used = @intCast(arena.state.end_index),
-        .written = 0,
-        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
-    };
-}
-
-pub fn grdw_gradido_transaction_decode(allocator: std.mem.Allocator, tx: *grdw.grdw_gradido_transaction, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-
-    var reader: std.io.Reader = .fixed(data[0..size]);
-    const decoded_tx = try gradido.GradidoTransaction.decode(&reader, arena.allocator());
-    try convert_gradido_transaction(decoded_tx, tx);
-    return .{
-        .allocator_used = @intCast(arena.state.end_index),
-        .written = 0,
-        .state = grdw.GRDW_ENCODING_ERROR_SUCCESS,
-    };
-}
-
-pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.grdw_transaction_body, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-
-    var reader: std.io.Reader = .fixed(data[0..size]);
-    const decoded_tx = try gradido.TransactionBody.decode(&reader, arena.allocator());
+fn convertTransactionBody(decoded_tx: gradido.TransactionBody, body: *grdw.grdw_transaction_body) DecodeError!void {
     body.* = .{
         .memos = null,
         .memos_count = 0,
@@ -186,9 +123,9 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
             .nanos = decoded_tx.created_at.?.nanos,
         },
         .transaction_type = grdw.GRDW_TRANSACTION_TYPE_NONE,
-        .version_number = copy_string(decoded_tx.version_number),
+        .version_number = copyString(decoded_tx.version_number),
         .type = @intCast(@intFromEnum(decoded_tx.type)),
-        .other_group = copy_string(decoded_tx.other_group),
+        .other_group = copyString(decoded_tx.other_group),
         .data = undefined,
     };
     // memos
@@ -197,7 +134,7 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
         for (0..decoded_tx.memos.items.len) |i| {
             const memo = decoded_tx.memos.items[i];
             body.*.memos[i].type = @intCast(@intFromEnum(memo.type));
-            body.*.memos[i].memo = copy_bytes(memo.memo);
+            body.*.memos[i].memo = copyBytes(memo.memo);
             body.*.memos[i].memo_size = @intCast(memo.memo.len);
         }
     }
@@ -206,13 +143,13 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
         switch (body_data) {
             .transfer => |transfer| {
                 body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_TRANSFER;
-                body.*.data.transfer = grdw.grdw_gradido_transfer_new(try convertTransferAmount(transfer.sender), @ptrCast(transfer.recipient));
+                body.*.data.transfer = grdw.grdw_gradido_transfer_new(try ConvertTransferAmount(transfer.sender), @ptrCast(transfer.recipient));
             },
             .creation => |creation| {
                 if (creation.target_date) |target_date| {
                     body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_CREATION;
                     body.*.data.creation = grdw.grdw_gradido_creation_new(
-                        try convertTransferAmount(creation.recipient),
+                        try ConvertTransferAmount(creation.recipient),
                         grdw.grdw_timestamp_seconds{ .seconds = @intCast(target_date.seconds) },
                     );
                 } else {
@@ -242,7 +179,7 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
             .deferred_transfer => |deferred_transfer| {
                 if (deferred_transfer.transfer) |transfer| {
                     body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_DEFERRED_TRANSFER;
-                    body.*.data.deferred_transfer = grdw.grdw_gradido_deferred_transfer_new(try convertGradidoTransfer(transfer), @intCast(deferred_transfer.timeout_duration.?.seconds));
+                    body.*.data.deferred_transfer = grdw.grdw_gradido_deferred_transfer_new(try ConvertGradidoTransfer(transfer), @intCast(deferred_transfer.timeout_duration.?.seconds));
                 } else {
                     return error.DeferredTransferTransferIsNull;
                 }
@@ -254,7 +191,7 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
             .redeem_deferred_transfer => |redeem_deferred_transfer| {
                 if (redeem_deferred_transfer.transfer) |transfer| {
                     body.*.transaction_type = grdw.GRDW_TRANSACTION_TYPE_REDEEM_DEFERRED_TRANSFER;
-                    body.*.data.redeem_deferred_transfer = grdw.grdw_gradido_redeem_deferred_transfer_new(@intCast(redeem_deferred_transfer.deferredTransferTransactionNr), try convertGradidoTransfer(transfer));
+                    body.*.data.redeem_deferred_transfer = grdw.grdw_gradido_redeem_deferred_transfer_new(@intCast(redeem_deferred_transfer.deferredTransferTransactionNr), try ConvertGradidoTransfer(transfer));
                 } else {
                     return error.RedeemDeferredTransferTransferIsNull;
                 }
@@ -264,6 +201,63 @@ pub fn grdw_transaction_body_decode(allocator: std.mem.Allocator, body: *grdw.gr
                 body.*.data.timeout_deferred_transfer = grdw.grdw_gradido_timeout_deferred_transfer_new(@intCast(timeout_deferred_transfer.deferredTransferTransactionNr));
             },
         }
+    }
+}
+
+fn convertConfirmedTransaction(decoded_tx: gradido.ConfirmedTransaction, tx: *grdw.grdw_confirmed_transaction) DecodeError!void {
+    tx.* = .{
+        .id = decoded_tx.id,
+        .confirmed_at = .{
+            .seconds = decoded_tx.confirmed_at.?.seconds,
+            .nanos = decoded_tx.confirmed_at.?.nanos,
+        },
+        .version_number = copyString(decoded_tx.version_number),
+        .balance_derivation = @intCast(@intFromEnum(decoded_tx.balance_derivation)),
+        // .ledger_anchor = decoded_tx.ledger_anchor,
+        .running_hash = copyBytes(decoded_tx.running_hash),
+    };
+
+    // GradidoTransaction
+    if (decoded_tx.transaction) |transaction| {
+        try convertGradidoTransaction(transaction, &tx.transaction);
+    }
+
+    // ledger anchor
+    if (decoded_tx.ledger_anchor) |ledger_anchor| {
+        try convertLedgerAnchor(&tx.ledger_anchor, &ledger_anchor);
+    }
+
+    // account balances
+    grdw.grdw_confirmed_transaction_reserve_account_balances(tx, @intCast(decoded_tx.account_balances.items.len));
+    for (0..tx.*.account_balances_count) |i| {
+        // for (decoded_tx.account_balances.items) |account_balance| {
+        const account_balance = decoded_tx.account_balances.items[i];
+        @memcpy(&tx.*.account_balances[i].pubkey, account_balance.pubkey);
+        tx.*.account_balances[i].balance = account_balance.balance;
+        tx.*.account_balances[i].community_id = copyString(account_balance.community_id);
+    }
+}
+
+pub fn Decode(allocator: std.mem.Allocator, comptime T: type, tx: *T, data: [*c]const u8, size: usize) DecodeError!grdw.grdw_encode_result {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+
+    var reader: std.io.Reader = .fixed(data[0..size]);
+
+    switch (T) {
+        grdw.grdw_confirmed_transaction => {
+            const decoded_tx = try gradido.ConfirmedTransaction.decode(&reader, arena.allocator());
+            try convertConfirmedTransaction(decoded_tx, tx);
+        },
+        grdw.grdw_gradido_transaction => {
+            const decoded_tx = try gradido.GradidoTransaction.decode(&reader, arena.allocator());
+            try convertGradidoTransaction(decoded_tx, tx);
+        },
+        grdw.grdw_transaction_body => {
+            const decoded_tx = try gradido.TransactionBody.decode(&reader, arena.allocator());
+            try convertTransactionBody(decoded_tx, tx);
+        },
+        else => return error.InvalidInput,
     }
 
     return .{
