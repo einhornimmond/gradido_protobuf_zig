@@ -62,7 +62,7 @@ export fn grdw_confirmed_transaction_decode(tx: *grdw.grdw_confirmed_transaction
     return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_confirmed_transaction, tx, data, size });
 }
 export fn grdw_gradido_transaction_decode(tx: *grdw.grdw_gradido_transaction, data: *const u8, size: usize) grdw.grdw_encode_result {
-    return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_gradido_transaction, tx, data, size });
+    return wrapCodec(decode.Decode, 512, .{ grdw.grdw_gradido_transaction, tx, data, size });
 }
 export fn grdw_transaction_body_decode(txBody: *grdw.grdw_transaction_body, data: *const u8, size: usize) callconv(.c) grdw.grdw_encode_result {
     return wrapCodec(decode.Decode, 1024, .{ grdw.grdw_transaction_body, txBody, data, size });
