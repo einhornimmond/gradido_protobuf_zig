@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "grdu_memory.h"
 #include "grdw_basic_types.h"
 #include "grdw_hiero.h"
 #include "grdw_ledger_anchor.h"
@@ -15,7 +16,7 @@ typedef struct grdw_community_friends_update {
     bool color_fusion;
 } grdw_community_friends_update;
 
-grdw_community_friends_update* grdw_community_friends_update_new(bool color_fusion);
+grdw_community_friends_update* grdw_community_friends_update_new(grdu_memory* allocator, bool color_fusion);
 
 typedef struct grdw_community_root {
     uint8_t pubkey[32];
@@ -23,41 +24,41 @@ typedef struct grdw_community_root {
     uint8_t auf_pubkey[32];
 } grdw_community_root;
 
-grdw_community_root* grdw_community_root_new(const uint8_t* pubkey, const uint8_t* gmw_pubkey, const uint8_t* auf_pubkey);
+grdw_community_root* grdw_community_root_new(grdu_memory* allocator, const uint8_t* pubkey, const uint8_t* gmw_pubkey, const uint8_t* auf_pubkey);
 
 typedef struct grdw_gradido_creation {
     grdw_transfer_amount recipient;
     grdw_timestamp_seconds target_date;
 } grdw_gradido_creation;
 
-grdw_gradido_creation* grdw_gradido_creation_new(grdw_transfer_amount recipient, grdw_timestamp_seconds target_date);
+grdw_gradido_creation* grdw_gradido_creation_new(grdu_memory* allocator, grdw_transfer_amount recipient, grdw_timestamp_seconds target_date);
 
 typedef struct grdw_gradido_transfer {
     grdw_transfer_amount sender;
     uint8_t recipient[32];
 } grdw_gradido_transfer;
 
-grdw_gradido_transfer* grdw_gradido_transfer_new(grdw_transfer_amount sender, const uint8_t* recipient);
+grdw_gradido_transfer* grdw_gradido_transfer_new(grdu_memory* allocator, grdw_transfer_amount sender, const uint8_t* recipient);
 
 typedef struct grdw_gradido_deferred_transfer {
     grdw_gradido_transfer transfer;
     uint32_t timeout_duration;
 } grdw_gradido_deferred_transfer;
 
-grdw_gradido_deferred_transfer* grdw_gradido_deferred_transfer_new(grdw_gradido_transfer transfer, uint32_t timeout_duration);
+grdw_gradido_deferred_transfer* grdw_gradido_deferred_transfer_new(grdu_memory* allocator, grdw_gradido_transfer transfer, uint32_t timeout_duration);
 
 typedef struct grdw_gradido_redeem_deferred_transfer {
     uint64_t deferred_transfer_transaction_nr;
     grdw_gradido_transfer transfer;
 } grdw_gradido_redeem_deferred_transfer;
 
-grdw_gradido_redeem_deferred_transfer* grdw_gradido_redeem_deferred_transfer_new(uint64_t deferred_transfer_transaction_nr, grdw_gradido_transfer transfer);
+grdw_gradido_redeem_deferred_transfer* grdw_gradido_redeem_deferred_transfer_new(grdu_memory* allocator, uint64_t deferred_transfer_transaction_nr, grdw_gradido_transfer transfer);
 
 typedef struct grdw_gradido_timeout_deferred_transfer {
     uint64_t deferred_transfer_transaction_nr;
 } grdw_gradido_timeout_deferred_transfer;
 
-grdw_gradido_timeout_deferred_transfer* grdw_gradido_timeout_deferred_transfer_new(uint64_t deferred_transfer_transaction_nr);
+grdw_gradido_timeout_deferred_transfer* grdw_gradido_timeout_deferred_transfer_new(grdu_memory* allocator, uint64_t deferred_transfer_transaction_nr);
 
 // group founder must be first registering his root address,
 // the same which he used signing the global group add transaction
@@ -79,7 +80,7 @@ typedef struct grdw_register_address {
     uint8_t account_pubkey[32];    
 } grdw_register_address;
 
-grdw_register_address* grdw_register_address_new(const uint8_t* user_pubkey, grdw_address_type address_type, const uint8_t* name_hash, const uint8_t* account_pubkey, uint32_t derivation_index);
+grdw_register_address* grdw_register_address_new(grdu_memory* allocator, const uint8_t* user_pubkey, grdw_address_type address_type, const uint8_t* name_hash, const uint8_t* account_pubkey, uint32_t derivation_index);
 
 #ifdef __cplusplus
 }

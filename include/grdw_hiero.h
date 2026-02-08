@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "grdu_memory.h"
 #include "grdw_basic_types.h"
 
 // hiero 
@@ -20,7 +21,7 @@ typedef struct {
   grdw_hiero_account_id accountID;
 } grdw_hiero_transaction_id;
 
-grdw_hiero_transaction_id* grdw_hiero_transaction_id_new(const grdw_timestamp* transactionValidStart, const grdw_hiero_account_id* accountID);
+grdw_hiero_transaction_id* grdw_hiero_transaction_id_new(grdu_memory* allocator, const grdw_timestamp* transactionValidStart, const grdw_hiero_account_id* accountID);
 
 #ifdef __cplusplus
 }

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "grdu_memory.h"
 #include "grdw_basic_types.h"
 #include "grdw_hiero.h"
 #include "grdw_ledger_anchor.h"
@@ -65,7 +66,7 @@ typedef struct grdw_transaction_body {
   grdw_transaction_type transaction_type;     
 } grdw_transaction_body;
 
-void grdw_transaction_body_reserve_memos(grdw_transaction_body* body, size_t memos_count);
+void grdw_transaction_body_reserve_memos(grdu_memory* allocator,grdw_transaction_body* body, size_t memos_count);
 
 typedef enum {
   GRDW_BALANCE_DERIVATION_UNSPECIFIED = 0,
@@ -82,10 +83,8 @@ typedef struct grdw_gradido_transaction {
   uint16_t body_bytes_size;
 } grdw_gradido_transaction;
 
-void grdw_gradido_transaction_reserve_sig_map(grdw_gradido_transaction* tx, uint8_t sig_map_count);
-void grdw_gradido_transaction_set_body_bytes(grdw_gradido_transaction* tx, const uint8_t* body_bytes, size_t body_bytes_size);
-
-void grdw_account_balance_set_community_id(grdw_account_balance* balance, const char* community_id);
+void grdw_gradido_transaction_reserve_sig_map(grdu_memory* allocator, grdw_gradido_transaction* tx, uint8_t sig_map_count);
+void grdw_gradido_transaction_set_body_bytes(grdu_memory* allocator, grdw_gradido_transaction* tx, const uint8_t* body_bytes, size_t body_bytes_size);
 
 typedef struct grdw_confirmed_transaction {
   uint64_t id;
@@ -99,14 +98,11 @@ typedef struct grdw_confirmed_transaction {
   grdw_balance_derivation balance_derivation;
 } grdw_confirmed_transaction;
 
-void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transaction* tx, uint8_t account_balances_count);
+void grdw_confirmed_transaction_reserve_account_balances(grdu_memory* allocator, grdw_confirmed_transaction* tx, uint8_t account_balances_count);
 
-void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx);
-void grdw_transaction_body_free_deep(grdw_transaction_body* body);
-void grdw_gradido_transaction_free_deep(grdw_gradido_transaction* tx);
 // utils
-char* grdu_reserve_copy_string(const char* src, size_t size);
-uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size);
+char* grdu_reserve_copy_string(grdu_memory* allocator, const char* src, size_t size);
+uint8_t* grdu_reserve_copy(grdu_memory* allocator, const uint8_t* src, size_t size);
 size_t grdu_strlen(const char* src);
 
 // helper for performance optimization and error reporting
@@ -137,9 +133,9 @@ typedef struct grdw_encode_result {
 
 // zig will call c functions to malloc for tx pointer, but free must be called from caller
 // decode
-extern grdw_encode_result grdw_confirmed_transaction_decode(grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
-extern grdw_encode_result grdw_gradido_transaction_decode(grdw_gradido_transaction* tx, const uint8_t* data, size_t size);
-extern grdw_encode_result grdw_transaction_body_decode(grdw_transaction_body* body, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_confirmed_transaction_decode(grdu_memory* allocator, grdw_confirmed_transaction* tx, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_gradido_transaction_decode(grdu_memory* allocator, grdw_gradido_transaction* tx, const uint8_t* data, size_t size);
+extern grdw_encode_result grdw_transaction_body_decode(grdu_memory* allocator, grdw_transaction_body* body, const uint8_t* data, size_t size);
 // encode
 extern grdw_encode_result grdw_confirmed_transaction_encode(const grdw_confirmed_transaction* tx, uint8_t* data, size_t size);
 extern grdw_encode_result grdw_transaction_body_encode(const grdw_transaction_body* body, uint8_t* data, size_t size);

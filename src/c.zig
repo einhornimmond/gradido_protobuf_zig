@@ -1,6 +1,8 @@
 pub const grdw = @cImport({
     @cInclude("gradido_protobuf_zig.h");
     @cInclude("gradido_protobuf_zig.c");
+    @cInclude("grdu_memory.h");
+    @cInclude("grdu_memory.c");
     @cInclude("grdw_basic_types.h");
     @cInclude("grdw_hiero.h");
     @cInclude("grdw_ledger_anchor.h");
