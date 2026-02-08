@@ -11,10 +11,10 @@ typedef struct grdu_memory {
     size_t out_of_memory_capacity; // how many bytes were needed to allocate on top of last_index, outside of capacity
 } grdu_memory;
 
-void grdu_memory_free(grdu_memory* mem);
+extern void grdu_memory_free(grdu_memory* mem);
 // return 0 on success, -1 on error
-int grdu_memory_init(grdu_memory* mem, size_t capacity);
-void grdu_memory_init_static(grdu_memory* mem, uint8_t* data, size_t capacity);
-uint8_t * grdu_memory_alloc(grdu_memory* mem, size_t size);
+extern int grdu_memory_init(grdu_memory* mem, size_t capacity);
+extern void grdu_memory_init_static(grdu_memory* mem, uint8_t* data, size_t capacity);
+extern uint8_t * grdu_memory_alloc(grdu_memory* mem, size_t size);
 
 #endif //__GRDU_MEMORY_H
