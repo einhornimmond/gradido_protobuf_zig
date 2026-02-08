@@ -35,6 +35,7 @@ fn errorToGrdwEncodingError(err: anyerror) grdw.grdw_encoding_error {
         error.InvalidInput => return grdw.GRDW_ENCODING_ERROR_INVALID_INPUT,
         error.NotEnoughData => return grdw.GRDW_ENCODING_ERROR_NOT_ENOUGH_DATA,
         error.OutOfMemory => return grdw.GRDW_ENCODING_ERROR_OUT_OF_MEMORY,
+        error.CAllocFailed => return grdw.GRDW_ENCODING_ERROR_C_ALLOC_FAILED,
         error.ReadFailed => return grdw.GRDW_ENCODING_ERROR_READ_FAILED,
         error.RedeemDeferredTransferTransferIsNull => return grdw.GRDW_ENCODING_ERROR_REDEEM_DEFERRED_TRANSFER_TRANSFER_IS_NULL,
         error.TransferAmountIsNull => return grdw.GRDW_ENCODING_ERROR_TRANSFER_AMOUNT_IS_NULL,
