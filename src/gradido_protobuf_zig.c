@@ -2,13 +2,15 @@
 
 
 grdw_hiero_transaction_id* grdw_hiero_transaction_id_new(grdu_memory* allocator, const grdw_timestamp* transactionValidStart, const grdw_hiero_account_id* accountID) {
-  grdw_hiero_transaction_id* hiero_transaction_id = (grdw_hiero_transaction_id*)grdu_memory_alloc(allocator, sizeof(grdw_hiero_transaction_id));
+  grdw_hiero_transaction_id* hiero_transaction_id = grdu_memory_alloc(allocator, sizeof(grdw_hiero_transaction_id));
+  if(!hiero_transaction_id) return NULL;
   hiero_transaction_id->transactionValidStart = *transactionValidStart;
   hiero_transaction_id->accountID = *accountID;
   return hiero_transaction_id;
 }
 
 void grdw_ledger_anchor_set_hiero_transaction_id(grdw_ledger_anchor* anchor, grdw_hiero_transaction_id* hiero_transaction_id) {
+  if(!anchor || !hiero_transaction_id) return;
   anchor->type = GRDW_LEDGER_ANCHOR_TYPE_HIERO_TRANSACTION_ID;
   anchor->anchor_id.hiero_transaction_id = hiero_transaction_id;
 }
@@ -21,6 +23,7 @@ void grdw_gradido_transaction_reserve_sig_map(grdu_memory* allocator, grdw_gradi
 
 void grdw_gradido_transaction_set_body_bytes(grdu_memory* allocator, grdw_gradido_transaction* tx, const uint8_t* body_bytes, size_t body_bytes_size) {
   tx->body_bytes = (uint8_t*)grdu_memory_alloc(allocator, sizeof(uint8_t) * body_bytes_size);
+  if (!tx->body_bytes) return;
   tx->body_bytes_size = body_bytes_size;
   memcpy(tx->body_bytes, body_bytes, body_bytes_size);
 }
@@ -37,13 +40,15 @@ void grdw_confirmed_transaction_reserve_account_balances(grdu_memory* allocator,
 
 char* grdu_reserve_copy_string(grdu_memory* allocator, const char* src, size_t size) {
   char* dst = (char*)grdu_memory_alloc(allocator, size+1);
+  if(!dst) return NULL;
   memcpy(dst, src, size);
   dst[size] = '\0';
   return dst;
 }
 
 uint8_t* grdu_reserve_copy(grdu_memory* allocator, const uint8_t* src, size_t size) {
-  uint8_t* dst = (uint8_t*)grdu_memory_alloc(allocator, size);
+  uint8_t* dst = grdu_memory_alloc(allocator, size);
+  if(!dst) return NULL;
   memcpy(dst, src, size);
   return dst;
 }
