@@ -103,6 +103,7 @@ void grdw_confirmed_transaction_reserve_account_balances(grdw_confirmed_transact
 
 void grdw_confirmed_transaction_free_deep(grdw_confirmed_transaction* tx);
 void grdw_transaction_body_free_deep(grdw_transaction_body* body);
+void grdw_gradido_transaction_free_deep(grdw_gradido_transaction* tx);
 // utils
 char* grdu_reserve_copy_string(const char* src, size_t size);
 uint8_t* grdu_reserve_copy(const uint8_t* src, size_t size);

@@ -89,6 +89,21 @@ void grdw_transaction_body_free_deep(grdw_transaction_body* body) {
   body->transaction_type = GRDW_TRANSACTION_TYPE_NONE;
 }
 
+void grdw_gradido_transaction_free_deep(grdw_gradido_transaction* tx)
+{
+  if (!tx) return;
+  if (tx->body_bytes) {
+    free(tx->body_bytes);
+    tx->body_bytes = NULL;
+    tx->body_bytes_size = 0;
+  }
+  if (tx->sig_map) {
+    free(tx->sig_map);
+    tx->sig_map = NULL;
+    tx->sig_map_count = 0;
+  }
+}
+
 char* grdu_reserve_copy_string(const char* src, size_t size) {
   char* dst = (char*)malloc(size+1);
   memcpy(dst, src, size);
